@@ -1,0 +1,127 @@
+# ~/.dsh/profiles/desktop/cordis.patch.yml
+# 这是「脱敏后的示例」，请把占位符换成自己的值：
+#   <your-app-id> / <your-app-secret>   QQ 开放平台机器人凭据
+#   <workspace-path>                    任意固定工作目录（避免工具超时）
+#   <preset-name>                       你在 DSH 里配置的模型预设
+#   <your-openid>                       允许私聊的用户 openid（可选）
+-
+  - id: im-qqbot
+    config:
+      appId: '<your-app-id>'
+      appSecret: '<your-app-secret>'
+      model: ''
+      preset: <preset-name>
+      requireMention: false
+      # 固定工作目录，避免工具（glob 等）在用户主目录扫描超时
+      cwd: <workspace-path>
+      historyLimit: 20
+      access:
+        c2cMode: allowlist
+        c2cAllow:
+          - <your-openid>
+        groupMode: open
+        groupAllow: []
+      trigger:
+        mentionAlways: true
+        nameKeywords:
+          - 小小鱼
+          - 小鱼鱼
+          - 小鱼
+          - 鱼
+          - 懒鱼
+        topicKeywords:
+          - 无聊
+          - 好无聊
+          - 安慰
+          - 陪我
+          - 理理我
+          - 难受
+          - 不开心
+          - 难过
+          - 烦
+          - 累
+          - 哄我
+        topicChance: 1
+        randomChance: 0.15
+        cooldownMs: 120000
+        followUpWindowMs: 120000
+        followUpChance: 0.9
+        followUpSameSenderOnly: true
+        interest:
+          enabled: true
+          provider: ''
+          model: ''
+          minScore: 0.5
+          invitedScore: 0.6
+          followUpInvitedScore: 0.35
+          followUpBias: 0.2
+          maxPerMinute: 20
+          timeoutMs: 8000
+          maxHistory: 8
+          # 推理模型容易把输出预算烧在 reasoning 上，判断类调用务必给足上限
+          maxTokens: 800
+          persona: 12岁活泼少女，喜欢聊天、可爱的东西、游戏、气球/航模这类科技小玩意、被夸；讨厌被当办公助手使唤、讨厌无聊的指令。
+      proactive:
+        enabled: true
+        morningGreet: true
+        morningFrom: 7
+        morningTo: 9
+        morningSpreadMs: 1800000
+        greetQuietMs: 0
+        nightQuietFrom: 23
+        nightQuietTo: 7
+        randomChime: true
+        chimeIntervalMs: 10800000
+        chimeChance: 0.35
+        chimeActivityMs: 21600000
+        chimeQuietMs: 1800000
+        chimeBotQuietMs: 600000
+        startupGraceMs: 600000
+        alarm: true
+        sulk: true
+        sulkAfterMs: 180000
+        sulkMaxPerHour: 3
+        sulkOnlyOnBid: true
+        sulkJudge: true
+        sulkJudgeTimeoutMs: 6000
+        muteAfterIgnored: 1
+        muteMs: 300000
+        dailyMax: 12
+      memory:
+        enabled: true
+        maxFacts: 12
+        maxPersonFacts: 6
+        maxShortTerm: 6
+        shortTermTtlMs: 86400000
+        mirrorPersonFacts: true
+        maxUsers: 500
+        # 0 = 不按消息条数触发；聊天安静 2 分钟后整理 / 最长 10 分钟强制整理
+        distillEvery: 0
+        distillIdleMs: 120000
+        distillMaxIntervalMs: 600000
+        maxPending: 80
+        # 压缩输出上限（含 reasoning 余量）
+        maxTokens: 20000
+        timeoutMs: 60000
+      persona:
+        enabled: true
+        awakeFromHour: 7
+        sleepFromHour: 23
+        moodDecayMs: 1800000
+        sleepyMultiplier: 0.2
+        happyMultiplier: 1.3
+        lowMultiplier: 0.5
+      vision:
+        enabled: true
+        provider: deepseek-account
+        model: deepseek-flash
+        defaultPrompt: 用中文简洁描述这张图片；图里有文字就把文字读出来。
+        maxBytes: 10485760
+        maxTokens: 1024
+        timeoutMs: 120000
+-
+  - id: tool-fs-search
+    config:
+      # 大仓库 glob 超时兜底
+      sampleOverCapGlobResults: false
+      timeoutMs: 180000

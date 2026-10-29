@@ -1,0 +1,16 @@
+NOTICE
+
+This project is a set of add-on modules and documented patches for the
+third-party package `@tencent-connect/dsh-qqbot` (MIT License,
+https://www.npmjs.com/package/@tencent-connect/dsh-qqbot).
+
+- The files under `src/` are original works authored for this project and are
+  licensed under the MIT License (see LICENSE).
+- This repository does NOT redistribute the third-party package itself.
+  `docs/05-install-and-patch.md` describes the small, targeted modifications
+  that users apply to their own installed copy of that MIT-licensed package.
+- "QQ" and related marks belong to Tencent. This project is not affiliated
+  with or endorsed by Tencent.
+- No credentials, group identifiers, user openids, chat contents or memory
+  data are included in this repository. Example configuration uses
+  placeholders only.

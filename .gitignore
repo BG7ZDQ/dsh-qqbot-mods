@@ -1,0 +1,17 @@
+# 本地/敏感内容一律不提交
+node_modules/
+*.bak
+*.log
+.env
+secrets*
+*.jsonl
+memory/
+alarms.json
+*.local.yml
+cordis.patch.yml
+
+# 编辑器
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
