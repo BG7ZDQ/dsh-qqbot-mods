@@ -81,11 +81,10 @@ export function replyPolicyGate(config, logger, manager, services = {}) {
         engagement?.noteHumanMessage(gid, { addressed, content, senderName: msg.senderName, senderId });
         if (addressed)
             engagement?.noteAddressed(gid);
-        // 起床提醒只在"点名/叫名字"的消息里识别：正常聊天不会无故这么说，
-        // 之前对未点名的消息也扫一遍属于过度设计，已回退。
+        // 提醒（起床/取餐等）只在"点名/叫名字"的消息里识别：正常聊天不会无故这么说。
         const wakeAlarm = addressed ? engagement?.requestWakeAlarm?.(gid, content) : undefined;
         if (wakeAlarm) {
-            ctx.message.content = `${content}\n[系统提示：已登记 ${wakeAlarm.label} 的起床提醒，回复里自然确认一下即可，不要提"系统""闹钟"]`;
+            ctx.message.content = `${content}\n[系统提示：已登记 ${wakeAlarm.label} 的提醒，到点系统会自己提醒；回复里自然确认一下即可，不要提"系统""闹钟"]`;
             qqlog('alarm-set', { gid, label: wakeAlarm.label, at: wakeAlarm.at });
         }
         const muted = engagement?.isMuted(gid) === true;

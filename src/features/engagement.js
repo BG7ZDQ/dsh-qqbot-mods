@@ -60,8 +60,9 @@ const PROMPT_CHIME = '【系统触发·不要展示给用户】群里安静了�
 const PROMPT_SULK = '【系统触发·不要展示给用户】你刚才发言之后一直没人理你。'
     + '请你用自己的人设发一句小小的生闷气/委屈的话（一两句，可以傲娇、可以不高兴，但不要真的伤心），'
     + '发完这句就不再主动说话了。不要提到"系统""触发""提示词"，也不要道歉。';
-const PROMPT_WAKE = (timeLabel) => `【系统触发·不要展示给用户】现在是 ${timeLabel}，你之前答应叫主人起床。`
-    + '请你用自己的人设发一句叫他起床的话（可以可爱、可以催、可以带一点小抱怨），一两句就够，'
+const PROMPT_WAKE = (timeLabel, note) => `【系统触发·不要展示给用户】现在是 ${timeLabel}，`
+    + `你之前答应提醒主人${note ? `这件事（原话：「${note}」）` : '（叫他起床）'}。`
+    + '请你用自己的人设发一两句提醒的话（可以可爱、可以催、可以带一点小抱怨），'
     + '不要提到"系统""提醒""闹钟""提示词"。';
 /** 起床提醒的持久化文件 */
 const ALARM_FILE = join(homedir(), '.dsh-qqbot', 'alarms.json');
@@ -79,8 +80,10 @@ export function createEngagement(ctx, manager, config, logger, services = {}) {
     const states = new Map();
     /** 插件启动时间：启动后一段时间内不主动发言，避免重启后立刻插话 */
     const startedAt = Date.now();
-    /** 起床提醒持久化：{ version, groups: { [gid]: [{ at, label, fired }] } } */
+    /** 起床提醒持久化：{ version, groups: { [gid]: [{ at, label, fired, note }] } } */
     let alarmDoc = { version: 1, groups: {} };
+    /** 已说"提醒我…"但还没给时间的话题（5 分钟内补一句时间就登记） */
+    const pendingReminders = new Map();
     function loadAlarms() {
         try {
             if (existsSync(ALARM_FILE))
@@ -126,64 +129,107 @@ export function createEngagement(ctx, manager, config, logger, services = {}) {
         }
         return total + current;
     }
+    /** 是否在要求登记提醒（"提醒我取餐""叫我起床""别忘了拿"） */
+    function hasReminderIntent(content) {
+        if (typeof content !== 'string' || content.length === 0)
+            return false;
+        return /(提醒|叫我|喊我|叫醒|记得|别忘了|闹钟)/.test(content);
+    }
+    /** 时间点格式化成 HH:mm */
+    function labelOf(at) {
+        const d = new Date(at);
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
     /**
-     * 从一句话里解析"叫我起床"的时间。
-     * 支持："7点"、"七点半"、"下午一点四十"、"13:40"、"明早"（默认 7:30）。
-     * 没带时间就不当提醒，让模型自己问。
+     * 从任意一句话里解析时间点。
+     * 相对：5分钟后 / 二十分钟后 / 半小时后 / 1小时后
+     * 绝对：7点 / 七点半 / 下午一点四十 / 13:40
      */
-    function parseWakeRequest(content, now = Date.now()) {
+    function parseTime(content, now = Date.now()) {
         if (typeof content !== 'string' || content.length === 0)
             return undefined;
-        if (!/(叫|喊|提醒|闹钟|moring|morning)/i.test(content))
-            return undefined;
-        if (!/(起床|起|醒)/.test(content))
-            return undefined;
-        const numPart = '([0-9]{1,2}|[零一二两三四五六七八九十]{1,3})';
-        const match = new RegExp(`${numPart}\\s*[点:：时]\\s*(半|${numPart})?\\s*分?`).exec(content);
-        let hour;
-        let minute = 0;
-        if (match) {
-            hour = cnNumber(match[1]);
-            const minuteText = match[2];
-            minute = minuteText === '半' ? 30 : (minuteText ? cnNumber(minuteText) : 0);
-            // 下午/晚上：1~11 点转 24 小时制；中午按 12 点处理
+        const numPart = '([0-9]{1,3}|[零一二两三四五六七八九十]{1,3})';
+        // 半小时后 / 半个小时之后
+        if (/半个?\s*小时\s*(?:后|之后|以后)/.test(content)) {
+            const at = now + 30 * 60 * 1000;
+            return { at, label: labelOf(at) };
+        }
+        // 相对：N 分钟/小时之后
+        const rel = new RegExp(`${numPart}\\s*(分钟|分|个?小时|钟头)\\s*(?:后|之后|以后)`).exec(content);
+        if (rel) {
+            const value = cnNumber(rel[1]);
+            const minutes = /小时|钟头/.test(rel[2]) ? value * 60 : value;
+            if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 24 * 60)
+                return undefined;
+            const at = now + minutes * 60 * 1000;
+            return { at, label: labelOf(at) };
+        }
+        // 绝对时间
+        const abs = new RegExp(`${numPart}\\s*[点:：时]\\s*(半|${numPart})?\\s*分?`).exec(content);
+        if (abs) {
+            let hour = cnNumber(abs[1]);
+            const minuteText = abs[2];
+            const minute = minuteText === '半' ? 30 : (minuteText ? cnNumber(minuteText) : 0);
             if (/(下午|晚上|傍晚|夜里)/.test(content) && hour >= 1 && hour < 12)
                 hour += 12;
             else if (/中午/.test(content) && hour >= 1 && hour < 11)
                 hour += 12;
+            if (!Number.isInteger(hour) || hour < 0 || hour > 23)
+                return undefined;
+            if (!Number.isInteger(minute) || minute < 0 || minute > 59)
+                return undefined;
+            const at = new Date(now);
+            at.setHours(hour, minute, 0, 0);
+            if (at.getTime() <= now + 30 * 1000)
+                at.setDate(at.getDate() + 1);
+            return { at: at.getTime(), label: labelOf(at.getTime()) };
         }
-        else if (/(早上|早晨|明早|上午)/.test(content)) {
-            hour = 7;
-            minute = 30;
+        // "明早/早上" → 默认 7:30
+        if (/(早上|早晨|明早|上午)/.test(content)) {
+            const at = new Date(now);
+            at.setHours(7, 30, 0, 0);
+            if (at.getTime() <= now + 30 * 1000)
+                at.setDate(at.getDate() + 1);
+            return { at: at.getTime(), label: labelOf(at.getTime()) };
         }
-        else {
-            return undefined;
-        }
-        if (!Number.isInteger(hour) || hour < 0 || hour > 23)
-            return undefined;
-        if (!Number.isInteger(minute) || minute < 0 || minute > 59)
-            return undefined;
-        const at = new Date(now);
-        at.setHours(hour, minute, 0, 0);
-        if (at.getTime() <= now + 30 * 1000)
-            at.setDate(at.getDate() + 1);
-        return { at: at.getTime(), label: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}` };
+        return undefined;
     }
-    /** 记录一条起床提醒（同一时间点去重） */
+    /**
+     * 登记提醒。支持两种对话流程：
+     *   1. 一条消息里同时有意图和时间（"七点半叫我起床"）→ 直接登记；
+     *   2. 先说意图（"提醒我取餐"）→ 记住 pending；随后 5 分钟内的
+     *      "五分钟后吧" / "七点吧" 补全时间 → 登记。
+     */
     function requestWakeAlarm(gid, content) {
         if (!gid || cfg.alarm === false)
             return undefined;
-        const parsed = parseWakeRequest(content);
-        if (parsed === undefined)
+        const now = Date.now();
+        const time = parseTime(content, now);
+        const pending = pendingReminders.get(gid);
+        const pendingFresh = pending !== undefined && now - pending.at < 5 * 60 * 1000;
+        if (pendingFresh && time !== undefined) {
+            pendingReminders.delete(gid);
+            return recordAlarm(gid, time, pending.content);
+        }
+        if (pendingFresh)
             return undefined;
+        if (hasReminderIntent(content)) {
+            if (time !== undefined)
+                return recordAlarm(gid, time, content);
+            pendingReminders.set(gid, { at: now, content: String(content).slice(0, 60) });
+            return undefined;
+        }
+        return undefined;
+    }
+    /** 写入一条提醒（同一时间点去重） */
+    function recordAlarm(gid, parsed, note) {
         const list = Array.isArray(alarmDoc.groups[gid]) ? alarmDoc.groups[gid] : [];
         alarmDoc.groups[gid] = list;
-        if (list.some((a) => a && a.at === parsed.at && a.fired !== true)) {
+        if (list.some((a) => a && a.at === parsed.at && a.fired !== true))
             return parsed;
-        }
-        list.push({ at: parsed.at, label: parsed.label, fired: false });
+        list.push({ at: parsed.at, label: parsed.label, fired: false, note: String(note ?? '').slice(0, 80) });
         saveAlarms();
-        logger?.info?.(`im-qqbot: wake alarm set for group ${gid} at ${parsed.label}`);
+        logger?.info?.(`im-qqbot: reminder set for group ${gid} at ${parsed.label}`);
         return parsed;
     }
     /** 到点的起床提醒（不受夜间静默限制） */
@@ -205,7 +251,7 @@ export function createEngagement(ctx, manager, config, logger, services = {}) {
                 changed = true;
                 continue;
             }
-            const sent = await promptGroup(state.gid, PROMPT_WAKE(alarm.label ?? ''), 'wake');
+            const sent = await promptGroup(state.gid, PROMPT_WAKE(alarm.label ?? '', alarm.note), 'wake');
             if (sent) {
                 alarm.fired = true;
                 changed = true;

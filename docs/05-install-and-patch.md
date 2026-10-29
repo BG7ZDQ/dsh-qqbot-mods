@@ -72,10 +72,11 @@ src/shared/qqlog.js           → dist/shared/qqlog.js
 ### 2.7 `dist/session/session-manager.js`
 
 - 新增字段：`memory`、`personaState`；
-- 组装 system prompt 时追加三个 section（按 order 排序）：
+- 组装 system prompt 时追加四个 section（按 order 排序）：
   - `qqbot:persona-state`（作息/情绪状态，order 91）
   - `qqbot:memory`（长期记忆，order 92）
   - `qqbot:memory-short`（短期记忆，order 93）
+  - `qqbot:rules`（系统规则：提醒统一由插件登记，禁止模型自建定时任务，order 94）
 - 记忆注入用 `memory.render(peerId, memory.lastSpeaker(peerId))`。
 
 ## 步骤 3：插件配置（`~/.dsh/profiles/desktop/cordis.patch.yml`）
