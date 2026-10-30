@@ -22,3 +22,4 @@ preset-*.generated.yml
 dump.yml
 *.dump
 memory-dump.md
+.gitattributes
