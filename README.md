@@ -80,6 +80,21 @@
 - **触发词**：`trigger.nameKeywords` / `topicKeywords` 按自己的机器人和群调整；
 - **推理模型**：所有工具型小模型调用都必须 `reasoningEffort: 'low'` 且给足 `maxTokens`，否则推理吃光输出、正文为空（本项目实际踩过的坑，已在代码里写死）。
 
+### 人设定制（重要）
+
+示例人设叫「小小鱼」。**人设主体**在 `groupPrompt` / `directPrompt`，想换成什么角色直接改配置即可。
+
+另有少量提示词、判断器描述、记忆前缀在代码里写死了这个名字，换机器人名时请一并替换：
+
+```powershell
+grep -rn 小小鱼 src/
+# src/middleware/interest-judge.js（判断器 prompt，11 处）
+# src/features/memory.js（记忆整理 prompt / 缓冲前缀，4 处）
+# src/features/engagement.js（主动发言相关，1 处）
+```
+
+改完重新复制到插件 `dist/` 并重启。触发词 `trigger.nameKeywords` 也要换成新名字。
+
 ## 目录结构
 
 ```

@@ -15,3 +15,10 @@ cordis.patch.yml
 .idea/
 .DS_Store
 Thumbs.db
+
+# 本地生成产物（按 docs/06 在本地生成，含上游 preset 文本，不要提交）
+preset-*.generated.yml
+*.bundle.yml
+dump.yml
+*.dump
+memory-dump.md
