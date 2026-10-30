@@ -1,4 +1,4 @@
-# 把 src/ 下的新增模块复制进已安装的 QQ 插件 dist/（会先备份被覆盖的文件）
+﻿# 把 src/ 下的新增模块复制进已安装的 QQ 插件 dist/（会先备份被覆盖的文件）
 #
 # 用法：
 #   pwsh -File install.ps1 -PluginDist "C:\Users\<you>\.dsh\profiles\desktop\node_modules\@tencent-connect\dsh-qqbot\dist"

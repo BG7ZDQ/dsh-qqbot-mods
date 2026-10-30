@@ -7,6 +7,8 @@
   - 全局：`~/.dsh/profiles/desktop/node_modules/@tencent-connect/dsh-qqbot/dist/`
   - 或 DSH 应用内置副本（若存在）
 - 修改后需要**重启 DSH 桌面端**才生效（`dist/` 是 ESM，进程内不热更新）。
+- 想让 QQ 会话的上下文压缩更早触发（强烈建议）：装完本页后按
+  [`06-context-management.md`](06-context-management.md) 配一个 QQ 专用 agent preset。
 
 ## 步骤 1：复制新增模块
 
