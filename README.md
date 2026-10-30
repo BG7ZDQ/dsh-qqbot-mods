@@ -1,6 +1,9 @@
 # dsh-qqbot-mods
 
-给 [`@tencent-connect/dsh-qqbot`](https://www.npmjs.com/package/@tencent-connect/dsh-qqbot)（QQ 机器人插件）做的**行为增强补丁集**，运行在 [DeepSeek Harness](https://github.com/deepseek-ai)（DSH）上。
+> 让 DSH 的 QQ 机器人**活在群里**。
+>
+> 给 [`@tencent-connect/dsh-qqbot`](https://www.npmjs.com/package/@tencent-connect/dsh-qqbot)（QQ 机器人插件）做的**拟人化行为增强补丁集**，运行在 [DeepSeek Harness](https://github.com/deepseek-ai)（DSH）上：会看气氛决定接不接话、有长期/短期记忆、有作息和情绪、会主动开口，也替你管住上下文成本。
+
 
 不是 fork，也不重新分发原插件代码：**新增若干独立模块** + 对原包 `dist/` 的少量**定点修改**（逐条列在 [`docs/05-install-and-patch.md`](docs/05-install-and-patch.md)），升级原插件后照着清单重新核对即可。
 
